@@ -44,14 +44,16 @@ export default function CreateMemoryPage() {
     }).catch(() => {})
   }, [])
 
-  // Load demo memory if exists
+  // Only auto-load if there's a DRAFT memory in progress
   useEffect(() => {
     if (existingMemories.length > 0 && !memory) {
-      const demo = existingMemories[0]
-      setMemory(demo)
-      setStep(3)
-      loadAuditLog(demo.id)
-      loadChatHistory(demo.id)
+      const draft = existingMemories.find(m => m.status === 'DRAFT')
+      if (draft) {
+        setMemory(draft)
+        setStep(3)
+        loadAuditLog(draft.id)
+        loadChatHistory(draft.id)
+      }
     }
   }, [existingMemories])
 
