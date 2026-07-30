@@ -1,0 +1,58 @@
+RISK ASSESSMENT
+Project: Passkey Authentication Migration
+Date: January 30, 2026
+Author: Security & Risk Team
+Risk ID: RA-2026-015
+
+RISK REGISTER:
+
+RISK-001: Device Compatibility Gap
+Severity: MEDIUM
+Likelihood: HIGH
+Impact: 5% of users unable to use passkeys immediately
+Mitigation: Implement security key fallback + cross-device QR authentication
+Owner: DevOps Team
+Status: Mitigation in progress
+
+RISK-002: User Adoption Resistance
+Severity: LOW
+Likelihood: MEDIUM
+Impact: Slower rollout timeline
+Mitigation: Phased approach, training sessions, executive sponsorship
+Owner: HR & Communications
+Status: Communication plan drafted
+
+RISK-003: Platform Authenticator Failure
+Severity: MEDIUM
+Likelihood: LOW
+Impact: Users locked out if device biometric fails
+Mitigation: Recovery codes + admin-assisted re-enrollment
+Owner: IT Support
+Status: Recovery flow designed
+
+RISK-004: Vendor Lock-in
+Severity: LOW
+Likelihood: LOW
+Impact: Dependency on Apple/Google/Microsoft authenticator ecosystems
+Mitigation: Multi-platform passkey sync, portable credentials via FIDO2
+Owner: Architecture Team
+Status: Monitored
+
+RISK-005: Regulatory Change
+Severity: LOW
+Likelihood: LOW
+Impact: New regulations might mandate additional factors
+Mitigation: Architecture supports layered authentication, can add factors
+Owner: Compliance Team
+Status: No current regulatory concerns
+
+OVERALL RISK SCORE: MEDIUM
+RECOMMENDATION: Proceed with migration. All identified risks have viable mitigations.
+
+RISK ACCEPTANCE:
+- CTO accepts residual risk of 5% device incompatibility
+- CISO accepts transition period risk (dual auth systems for 6 months)
+- VP Engineering accepts timeline risk (potential 2-week delay in Q2)
+
+Signed: Risk Assessment Board
+Date: January 31, 2026

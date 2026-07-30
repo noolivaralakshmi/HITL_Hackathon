@@ -1,0 +1,50 @@
+MEETING NOTES - Authentication Strategy Review
+Date: January 15, 2026
+Attendees: Sarah Chen (CISO), Marcus Johnson (VP Engineering), Dev Team Leads
+
+AGENDA:
+1. Current authentication vulnerabilities
+2. Proposed migration to passkeys
+3. Timeline and resource planning
+
+DISCUSSION:
+
+Sarah Chen opened the meeting by presenting Q4 2025 security metrics:
+- 67% of security breaches involved compromised credentials
+- 1,200 password reset tickets per month
+- Average time to detect credential theft: 14 days
+- Phishing simulation failure rate: 23% of employees
+
+Marcus Johnson: "We need to move to a passwordless approach. Our current system is fundamentally insecure."
+
+The team reviewed three options:
+1. Keep passwords with enhanced MFA
+2. Hardware MFA tokens (YubiKey)
+3. Platform passkeys (WebAuthn/FIDO2)
+
+After discussion, the team unanimously agreed on passkeys because:
+- Phishing-resistant by design
+- No hardware distribution needed
+- Better user experience (biometric unlock)
+- Industry standard (FIDO2/WebAuthn)
+
+Hardware tokens were rejected due to:
+- Cost: $45 per token × 10,000+ employees = $450K+ just for hardware
+- Logistics: Distribution, replacement, inventory management
+- User friction: Must carry physical token at all times
+
+TIMELINE AGREED:
+- Q1 2026: Pilot with IT department (1,000 users)
+- Q2 2026: Full company rollout
+- Q3 2026: Begin password deprecation for non-critical systems
+
+ACTION ITEMS:
+- Marcus: Prepare architecture decision document
+- Sarah: Conduct formal security review
+- DevOps: Assess browser/device compatibility across fleet
+- HR: Plan user communication and training
+
+NEXT MEETING: February 1, 2026
+
+---
+Meeting notes recorded by: Alex Rivera, Technical Program Manager
