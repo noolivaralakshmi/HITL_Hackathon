@@ -38,25 +38,7 @@ export default function CreateMemoryPage() {
   const [auditLog, setAuditLog] = useState([])
   const [existingMemories, setExistingMemories] = useState([])
 
-  // Load existing memories on mount
-  useEffect(() => {
-    listMemories().then(res => {
-      setExistingMemories(res.data?.memories || [])
-    }).catch(() => {})
-  }, [])
-
-  // Only auto-load if there's a DRAFT memory in progress
-  useEffect(() => {
-    if (existingMemories.length > 0 && !memory) {
-      const draft = existingMemories.find(m => m.status === 'DRAFT')
-      if (draft) {
-        setMemory(draft)
-        setStep(3)
-        loadAuditLog(draft.id)
-        loadChatHistory(draft.id)
-      }
-    }
-  }, [existingMemories])
+  // No auto-loading — always start fresh on the upload step
 
   const loadAuditLog = async (memoryId) => {
     try {
