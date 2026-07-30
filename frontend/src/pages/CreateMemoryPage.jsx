@@ -12,6 +12,7 @@ import {
 import FileUpload from '../components/FileUpload'
 import ChangeDetection from '../components/ChangeDetection'
 import ReasoningRecord from '../components/ReasoningRecord'
+import EditableReasoningRecord from '../components/EditableReasoningRecord'
 import MissingInfo from '../components/MissingInfo'
 import ChatPanel from '../components/ChatPanel'
 import ApprovalBar from '../components/ApprovalBar'
@@ -151,9 +152,26 @@ export default function CreateMemoryPage() {
     }
   }
 
-  const handleEdit = async () => {
-    // For demo: just show a message. In production you'd open an editor.
-    alert('Edit mode: In production, this would open an inline editor for the reasoning record.')
+  const [isEditing, setIsEditing] = useState(false)
+
+  const handleEdit = () => {
+    setIsEditing(true)
+  }
+
+  const handleSaveEdit = async (updatedReasoning) => {
+    if (!memory) return
+    try {
+      const res = await editMemoryReasoning(memory.id, currentUser.id, updatedReasoning)
+      setMemory(res.data)
+      setIsEditing(false)
+      await loadAuditLog(memory.id)
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Edit failed.')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
   }
 
   const handleRollback = async (reason) => {
@@ -234,7 +252,15 @@ export default function CreateMemoryPage() {
 
                 <GuardrailAlert flags={memory.guardrail_flags} />
 
-                <ReasoningRecord reasoning={memory.reasoning} />
+                {isEditing ? (
+                  <EditableReasoningRecord
+                    reasoning={memory.reasoning}
+                    onSave={handleSaveEdit}
+                    onCancel={handleCancelEdit}
+                  />
+                ) : (
+                  <ReasoningRecord reasoning={memory.reasoning} />
+                )}
 
                 <MissingInfo items={memory.missing_info} />
 
