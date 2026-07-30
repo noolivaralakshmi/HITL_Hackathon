@@ -11,6 +11,11 @@ const sectionIcons = {
   evidence: FileText,
   decision_makers: Users,
   timeline: Calendar,
+  rollback_strategy: ArrowRight,
+  risk_owners: Users,
+  success_criteria: Target,
+  communication_plan: FileText,
+  dependencies: Puzzle,
 }
 
 export default function ReasoningRecord({ reasoning }) {

@@ -163,6 +163,11 @@ export default function EditableReasoningRecord({ reasoning, onSave, onCancel })
         {renderAlternatives()}
         {renderListField('risks_accepted', 'Risks Accepted')}
         {renderListField('assumptions', 'Assumptions')}
+        {renderStringField('rollback_strategy', 'Rollback Strategy')}
+        {renderStringField('risk_owners', 'Risk Owners')}
+        {renderStringField('success_criteria', 'Success Criteria')}
+        {renderStringField('communication_plan', 'Communication Plan')}
+        {renderStringField('dependencies', 'Dependencies')}
         {renderStringField('timeline', 'Timeline')}
         {renderStringField('additional_context', 'Additional Context')}
 
