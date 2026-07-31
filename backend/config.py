@@ -9,18 +9,16 @@ BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.amazon.nova-2-lite-v1:
 BEDROCK_GUARDRAIL_ID = os.environ.get("BEDROCK_GUARDRAIL_ID", "ka5t8n9etx95")
 BEDROCK_GUARDRAIL_VERSION = os.environ.get("BEDROCK_GUARDRAIL_VERSION", "5")
 
-# Role hierarchy (higher index = more permissions)
-ROLE_HIERARCHY = {
-    "viewer": 0,
-    "reviewer": 1,
-    "approver": 2,
-    "admin": 3,
-}
-
-# Approval rules by risk level
-APPROVAL_RULES = {
-    "LOW": {"required_role": "reviewer", "auto_approve": False, "blocked": False},
-    "MEDIUM": {"required_role": "approver", "auto_approve": False, "blocked": False},
-    "HIGH": {"required_role": "admin", "auto_approve": False, "blocked": False},
-    "BLOCKED": {"required_role": None, "auto_approve": False, "blocked": True},
+# Role definitions
+# contributor: can upload docs, create memory, edit, discard, send for approval
+# contributor+reviewer: all of above + can approve/reject memories assigned to them
+ROLES = {
+    "contributor": {
+        "can_contribute": True,
+        "can_review": False,
+    },
+    "contributor+reviewer": {
+        "can_contribute": True,
+        "can_review": True,
+    },
 }

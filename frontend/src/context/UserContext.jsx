@@ -1,34 +1,37 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import { getUsers } from '../api/client'
+import { createContext, useContext, useState } from 'react'
 
 const UserContext = createContext(null)
 
-const DEFAULT_USERS = [
-  { id: 'user-admin-001', name: 'Sarah Chen', email: 'sarah.chen@company.com', role: 'admin' },
-  { id: 'user-approver-001', name: 'Marcus Johnson', email: 'marcus.j@company.com', role: 'approver' },
-  { id: 'user-reviewer-001', name: 'Alex Rivera', email: 'alex.r@company.com', role: 'reviewer' },
-  { id: 'user-viewer-001', name: 'Jordan Lee', email: 'jordan.l@company.com', role: 'viewer' },
-]
-
 export function UserProvider({ children }) {
-  const [users, setUsers] = useState(DEFAULT_USERS)
-  const [currentUser, setCurrentUser] = useState(DEFAULT_USERS[2]) // Default: reviewer
+  const [currentUser, setCurrentUser] = useState(null)
 
-  useEffect(() => {
-    getUsers()
-      .then((res) => {
-        if (res.data?.users?.length) setUsers(res.data.users)
-      })
-      .catch(() => {}) // Use defaults on error
-  }, [])
-
-  const switchUser = (userId) => {
-    const user = users.find((u) => u.id === userId)
-    if (user) setCurrentUser(user)
+  const login = (user) => {
+    setCurrentUser(user)
+    localStorage.setItem('hitl_user', JSON.stringify(user))
   }
 
+  const logout = () => {
+    setCurrentUser(null)
+    localStorage.removeItem('hitl_user')
+  }
+
+  // Restore from localStorage on mount
+  if (!currentUser) {
+    const stored = localStorage.getItem('hitl_user')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (parsed && parsed.id) {
+          setCurrentUser(parsed)
+        }
+      } catch {}
+    }
+  }
+
+  const isReviewer = currentUser?.role === 'contributor+reviewer'
+
   return (
-    <UserContext.Provider value={{ users, currentUser, switchUser }}>
+    <UserContext.Provider value={{ currentUser, login, logout, isReviewer }}>
       {children}
     </UserContext.Provider>
   )

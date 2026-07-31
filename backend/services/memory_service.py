@@ -5,14 +5,14 @@ from datetime import datetime
 from backend.database.connection import get_db, dict_from_row
 
 
-def create_memory(reviewer_id: str) -> dict:
+def create_memory(contributor_id: str) -> dict:
     """Create a new draft memory record."""
     db = get_db()
     memory_id = str(uuid.uuid4())
     db.execute(
-        """INSERT INTO memories (id, status, reviewer_id, created_at)
+        """INSERT INTO memories (id, status, contributor_id, created_at)
            VALUES (?, 'DRAFT', ?, ?)""",
-        (memory_id, reviewer_id, datetime.utcnow().isoformat())
+        (memory_id, contributor_id, datetime.utcnow().isoformat())
     )
     db.commit()
     db.close()

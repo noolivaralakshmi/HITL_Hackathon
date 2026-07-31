@@ -3,6 +3,7 @@ import json
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel as PydanticBaseModel
 
 from backend.services.ai_service import GuardrailBlockedException
 
@@ -221,7 +222,7 @@ def approve(memory_id: str, req: ApproveRequest):
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
 
-    if memory["status"] != "DRAFT":
+    if memory["status"] not in ("DRAFT", "PENDING_REVIEW"):
         raise HTTPException(status_code=400, detail=f"Cannot approve memory in '{memory['status']}' status")
 
     # Check permission
@@ -312,6 +313,80 @@ def rollback(memory_id: str, req: RollbackRequest):
 def get_memory_snapshots(memory_id: str):
     """Get all snapshots for a memory."""
     return {"snapshots": get_snapshots(memory_id)}
+
+
+class SubmitForReviewRequest(PydanticBaseModel):
+    user_id: str
+    reviewer_id: str
+
+
+class SendReminderRequest(PydanticBaseModel):
+    user_id: str
+
+
+@router.patch("/{memory_id}/submit-for-review")
+def submit_for_review(memory_id: str, req: SubmitForReviewRequest):
+    """Submit a memory for review - assigns a reviewer and changes status."""
+    memory = get_memory(memory_id)
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    if memory["status"] != "DRAFT":
+        raise HTTPException(status_code=400, detail="Can only submit DRAFT memories for review")
+
+    now = datetime.utcnow().isoformat()
+    result = update_memory(
+        memory_id,
+        status="PENDING_REVIEW",
+        assigned_reviewer=req.reviewer_id,
+        submitted_at=now,
+    )
+
+    db = get_db()
+    log_action(db, memory_id, req.user_id, "HUMAN_REVIEW",
+               human_decision=f"Submitted for review to {req.reviewer_id}",
+               details={"assigned_reviewer": req.reviewer_id})
+    db.close()
+
+    return result
+
+
+@router.patch("/{memory_id}/discard")
+def discard_memory(memory_id: str, req: ApproveRequest):
+    """Discard a memory (contributor decides not to submit)."""
+    memory = get_memory(memory_id)
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    result = update_memory(memory_id, status="DISCARDED")
+
+    db = get_db()
+    log_action(db, memory_id, req.user_id, "REJECTED",
+               human_decision="Discarded by contributor")
+    db.close()
+
+    return result
+
+
+@router.post("/{memory_id}/send-reminder")
+def send_reminder(memory_id: str, req: SendReminderRequest):
+    """Send a reminder to the assigned reviewer."""
+    memory = get_memory(memory_id)
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    if memory["status"] != "PENDING_REVIEW":
+        raise HTTPException(status_code=400, detail="Memory is not pending review")
+
+    # In a real app this would send an email/notification
+    # For demo, just log it
+    db = get_db()
+    log_action(db, memory_id, req.user_id, "USER_REQUEST",
+               human_decision="Sent reminder to reviewer",
+               details={"action": "reminder_sent", "reviewer": memory.get("assigned_reviewer")})
+    db.close()
+
+    return {"status": "reminder_sent", "reviewer_id": memory.get("assigned_reviewer")}
 
 
 @router.post("/{memory_id}/merge")

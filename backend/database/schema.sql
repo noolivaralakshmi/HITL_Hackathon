@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('admin', 'approver', 'reviewer', 'viewer')),
+    role TEXT NOT NULL CHECK(role IN ('contributor', 'contributor+reviewer')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -17,14 +17,17 @@ CREATE TABLE IF NOT EXISTS memories (
     missing_info TEXT DEFAULT '[]',
     risk_level TEXT DEFAULT 'MEDIUM' CHECK(risk_level IN ('LOW', 'MEDIUM', 'HIGH', 'BLOCKED')),
     guardrail_flags TEXT DEFAULT '[]',
-    status TEXT DEFAULT 'DRAFT' CHECK(status IN ('DRAFT', 'VERIFIED', 'REJECTED', 'ROLLED_BACK', 'BLOCKED')),
-    reviewer_id TEXT,
+    status TEXT DEFAULT 'DRAFT' CHECK(status IN ('DRAFT', 'PENDING_REVIEW', 'VERIFIED', 'REJECTED', 'ROLLED_BACK', 'BLOCKED', 'DISCARDED')),
+    contributor_id TEXT,
+    assigned_reviewer TEXT,
     approved_by TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    submitted_at TIMESTAMP,
     approved_at TIMESTAMP,
     rolled_back_at TIMESTAMP,
     rollback_reason TEXT,
-    FOREIGN KEY (reviewer_id) REFERENCES users(id),
+    FOREIGN KEY (contributor_id) REFERENCES users(id),
+    FOREIGN KEY (assigned_reviewer) REFERENCES users(id),
     FOREIGN KEY (approved_by) REFERENCES users(id)
 );
 
@@ -97,12 +100,12 @@ CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
     reasoning
 );
 
--- Insert default users for demo
+-- Insert default users for demo (2 contributors, 2 contributor+reviewers)
 INSERT OR IGNORE INTO users (id, name, email, role) VALUES
-    ('user-admin-001', 'Sarah Chen', 'sarah.chen@company.com', 'admin'),
-    ('user-approver-001', 'Marcus Johnson', 'marcus.j@company.com', 'approver'),
-    ('user-reviewer-001', 'Alex Rivera', 'alex.r@company.com', 'reviewer'),
-    ('user-viewer-001', 'Jordan Lee', 'jordan.l@company.com', 'viewer');
+    ('user-001', 'Vara Lakshmi', 'vara.lakshmi@company.com', 'contributor+reviewer'),
+    ('user-002', 'Shanthi', 'shanthi@company.com', 'contributor+reviewer'),
+    ('user-003', 'Archana', 'archana@company.com', 'contributor'),
+    ('user-004', 'Priyanka', 'priyanka@company.com', 'contributor');
 
 -- Insert default approval rules
 INSERT OR IGNORE INTO approval_rules (id, risk_level, required_role, auto_approve, blocked, description) VALUES
