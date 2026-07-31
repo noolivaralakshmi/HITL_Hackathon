@@ -6,26 +6,45 @@ from typing import List
 
 from backend.database.connection import get_db, dict_from_row
 from backend.services.document_service import extract_text, save_document
+from backend.services.guardrail_service import detect_pii
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 
 @router.post("/upload")
 async def upload_documents(files: List[UploadFile] = File(...)):
-    """Upload documents and extract text content."""
+    """Upload documents, extract text, scan for PII, and redact if found."""
     db = get_db()
     uploaded = []
+    pii_warnings = []
 
     for file in files:
         content = await file.read()
         text = extract_text(file.filename, content)
         file_type = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "txt"
 
+        # Scan for PII in document content
+        flags, redacted_text = detect_pii(text)
+        if flags:
+            pii_warnings.append({
+                "filename": file.filename,
+                "issues": [f["message"] for f in flags],
+                "redacted": True
+            })
+            # Store the redacted version — never store raw PII
+            text = redacted_text
+
         doc = save_document(db, file.filename, file_type, text)
         uploaded.append(doc)
 
     db.close()
-    return {"documents": uploaded, "count": len(uploaded)}
+
+    result = {"documents": uploaded, "count": len(uploaded)}
+    if pii_warnings:
+        result["pii_warnings"] = pii_warnings
+        result["message"] = f"PII detected and redacted in {len(pii_warnings)} document(s). Sensitive information has been removed."
+
+    return result
 
 
 @router.get("/{document_id}")

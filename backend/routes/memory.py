@@ -85,6 +85,9 @@ def generate_memory(req: GenerateMemoryRequest):
     # Guardrail checks
     try:
         guardrail_result = run_guardrails(reasoning, documents_text, confidence)
+        # If PII was detected, use the redacted/cleaned reasoning instead
+        if guardrail_result.get("has_pii") and guardrail_result.get("cleaned_reasoning"):
+            reasoning = guardrail_result["cleaned_reasoning"]
     except Exception:
         guardrail_result = {"flags": [], "overall_safe": True, "should_block": False}
 

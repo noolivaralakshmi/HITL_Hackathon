@@ -54,14 +54,22 @@ export default function CreateMemoryPage() {
     } catch (e) {}
   }
 
+  const [piiWarnings, setPiiWarnings] = useState([])
+
   const handleGenerate = async () => {
     if (files.length === 0) return
     setIsLoading(true)
+    setPiiWarnings([])
 
     try {
       // Upload documents
       const uploadRes = await uploadDocuments(files)
       const docIds = uploadRes.data.documents.map(d => d.id)
+
+      // Check if PII was detected during upload
+      if (uploadRes.data.pii_warnings) {
+        setPiiWarnings(uploadRes.data.pii_warnings)
+      }
 
       // Generate memory
       const genRes = await generateMemory(docIds, currentUser.id)
@@ -231,6 +239,36 @@ export default function CreateMemoryPage() {
                   detectionReasons={memory.detection_reasons || []}
                   riskLevel={memory.risk_level}
                 />
+
+                {piiWarnings.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card p-5 border-red-500/30 bg-red-500/5"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center">
+                        <span className="text-red-400 text-lg">🛡️</span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-red-300">PII Detected & Redacted</h4>
+                        <p className="text-xs text-white/40">Sensitive information was automatically removed</p>
+                      </div>
+                    </div>
+                    {piiWarnings.map((warn, idx) => (
+                      <div key={idx} className="p-3 bg-red-500/5 rounded-lg border border-red-500/10 mb-2 last:mb-0">
+                        <p className="text-sm text-white/80 font-medium">{warn.filename}</p>
+                        <ul className="mt-1 space-y-1">
+                          {warn.issues.map((issue, i) => (
+                            <li key={i} className="text-xs text-red-300/70 flex items-center gap-2">
+                              <span>🚫</span> {issue}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
 
                 <GuardrailAlert flags={memory.guardrail_flags} />
 
