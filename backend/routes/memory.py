@@ -343,9 +343,12 @@ def submit_for_review(memory_id: str, req: SubmitForReviewRequest):
     )
 
     db = get_db()
+    # Resolve reviewer name for the log
+    reviewer_row = db.execute("SELECT name FROM users WHERE id = ?", (req.reviewer_id,)).fetchone()
+    reviewer_name = reviewer_row["name"] if reviewer_row else req.reviewer_id
     log_action(db, memory_id, req.user_id, "HUMAN_REVIEW",
-               human_decision=f"Submitted for review to {req.reviewer_id}",
-               details={"assigned_reviewer": req.reviewer_id})
+               human_decision=f"Submitted for review to {reviewer_name}",
+               details={"assigned_reviewer": req.reviewer_id, "reviewer_name": reviewer_name})
     db.close()
 
     return result
