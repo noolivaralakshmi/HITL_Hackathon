@@ -6,7 +6,8 @@ import { useUser } from '../context/UserContext'
 import {
   uploadDocuments, generateMemory, getMemory, listMemories,
   approveMemory, rejectMemory, editMemoryReasoning, rollbackMemory,
-  sendChatMessage, getChatHistory, getAuditLog
+  sendChatMessage, getChatHistory, getAuditLog, addDocumentsToMemory,
+  getDocumentsByMemory
 } from '../api/client'
 
 import FileUpload from '../components/FileUpload'
@@ -171,6 +172,29 @@ export default function CreateMemoryPage() {
     setIsEditing(false)
   }
 
+  const handleUpdateExisting = async (existingMemory) => {
+    if (!existingMemory || !memory) return
+    try {
+      // Get the document IDs that were linked to the newly created memory
+      const docsRes = await getDocumentsByMemory(memory.id)
+      const newDocIds = (docsRes.data?.documents || []).map(d => d.id)
+
+      if (newDocIds.length === 0) {
+        alert('No new documents found to add.')
+        return
+      }
+
+      // Add those documents to the existing memory and re-analyze
+      const res = await addDocumentsToMemory(existingMemory.id, newDocIds, currentUser.id)
+      setMemory(res.data)
+      setDuplicateWarning(null)
+      await loadAuditLog(existingMemory.id)
+      await loadChatHistory(existingMemory.id)
+    } catch (e) {
+      alert(e.response?.data?.detail || 'Failed to update existing memory.')
+    }
+  }
+
   const handleRollback = async (reason) => {
     if (!memory) return
     try {
@@ -310,9 +334,15 @@ export default function CreateMemoryPage() {
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-amber-300/60 mt-3">
-                      You can still create a new memory, or you can update the existing one by adding new documents through the Review Assistant chat.
-                    </p>
+                    <div className="flex items-center gap-3 mt-4">
+                      <button
+                        onClick={() => handleUpdateExisting(duplicateWarning.memories.find(m => m.status === 'VERIFIED') || duplicateWarning.memories[0])}
+                        className="btn-primary text-sm px-4 py-2"
+                      >
+                        Update Existing Memory with New Docs
+                      </button>
+                      <span className="text-xs text-white/30">or continue below to create a new one</span>
+                    </div>
                   </motion.div>
                 )}
 
