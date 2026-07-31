@@ -79,9 +79,52 @@ def invoke_bedrock(prompt: str, system_prompt: str = None, max_tokens: int = 409
     content = message.get("content", [])
 
     if content:
-        return content[0].get("text", "")
+        text = content[0].get("text", "")
+        # Replace AWS Bedrock anonymization placeholders with masked format
+        text = replace_pii_placeholders(text)
+        return text
 
     return ""
+
+
+def replace_pii_placeholders(text: str) -> str:
+    """Replace AWS Bedrock Guardrail PII placeholders with masked display format.
+
+    Bedrock ANONYMIZE replaces PII with {TYPE} placeholders like:
+    {US_SOCIAL_SECURITY_NUMBER}, {CREDIT_DEBIT_CARD_NUMBER}, {IP_ADDRESS}, etc.
+    We convert these to a user-friendly masked format.
+    """
+    import re
+
+    placeholder_map = {
+        "US_SOCIAL_SECURITY_NUMBER": "###-##-####",
+        "CREDIT_DEBIT_CARD_NUMBER": "####-####-####-####",
+        "EMAIL": "######@######",
+        "PHONE": "(###) ###-####",
+        "US_BANK_ACCOUNT_NUMBER": "########",
+        "US_PASSPORT_NUMBER": "#########",
+        "US_INDIVIDUAL_TAX_IDENTIFICATION_NUMBER": "###-##-####",
+        "DRIVER_ID": "DL#######",
+        "IP_ADDRESS": "#.#.#.#",
+        "URL": "https://######",
+        "USERNAME": "######",
+        "NAME": "######",
+        "ADDRESS": "######",
+        "AGE": "##",
+        "DATE_TIME": "##/##/####",
+        "AWS_ACCESS_KEY": "[AWS KEY REDACTED]",
+        "AWS_SECRET_KEY": "[AWS SECRET REDACTED]",
+        "PASSWORD": "[PASSWORD REDACTED]",
+    }
+
+    # Match {PLACEHOLDER_TYPE} patterns from Bedrock
+    for pii_type, mask in placeholder_map.items():
+        text = text.replace(f"{{{pii_type}}}", mask)
+
+    # Catch any remaining {SOMETHING} guardrail placeholders
+    text = re.sub(r'\{[A-Z_]+\}', '######', text)
+
+    return text
 
 
 class GuardrailBlockedException(Exception):
