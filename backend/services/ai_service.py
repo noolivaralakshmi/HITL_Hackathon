@@ -1,7 +1,7 @@
 """Amazon Bedrock AI service integration using Converse API for Amazon Nova."""
 import json
 import boto3
-from backend.config import AWS_REGION, BEDROCK_MODEL_ID
+from backend.config import AWS_REGION, BEDROCK_MODEL_ID, BEDROCK_GUARDRAIL_ID, BEDROCK_GUARDRAIL_VERSION
 from backend.prompts.analyze_change import build_analyze_prompt
 from backend.prompts.missing_info import build_missing_info_prompt
 from backend.prompts.hitl_chat import build_hitl_system_prompt, build_hitl_user_message
@@ -15,7 +15,7 @@ def get_bedrock_client():
 
 
 def invoke_bedrock(prompt: str, system_prompt: str = None, max_tokens: int = 4096) -> str:
-    """Invoke Amazon Bedrock using the Converse API (works with Amazon Nova models).
+    """Invoke Amazon Bedrock using the Converse API with AWS Guardrails attached.
 
     Args:
         prompt: The user message content
@@ -43,6 +43,12 @@ def invoke_bedrock(prompt: str, system_prompt: str = None, max_tokens: int = 409
             "maxTokens": max_tokens,
             "temperature": 0.1,
         },
+        # Attach AWS Bedrock Guardrail
+        "guardrailConfig": {
+            "guardrailIdentifier": BEDROCK_GUARDRAIL_ID,
+            "guardrailVersion": BEDROCK_GUARDRAIL_VERSION,
+            "trace": "enabled",
+        },
     }
 
     # Add system prompt if provided
@@ -50,6 +56,22 @@ def invoke_bedrock(prompt: str, system_prompt: str = None, max_tokens: int = 409
         kwargs["system"] = [{"text": system_prompt}]
 
     response = client.converse(**kwargs)
+
+    # Check if guardrail intervened
+    stop_reason = response.get("stopReason", "")
+    if stop_reason == "guardrail_intervened":
+        # Get the guardrail trace for logging
+        trace = response.get("trace", {}).get("guardrail", {})
+        blocked_msg = "Content blocked by AWS Bedrock Guardrail."
+
+        # Get output if any
+        output = response.get("output", {})
+        message = output.get("message", {})
+        content = message.get("content", [])
+        if content:
+            blocked_msg = content[0].get("text", blocked_msg)
+
+        raise GuardrailBlockedException(blocked_msg, trace)
 
     # Extract response text
     output = response.get("output", {})
@@ -60,6 +82,13 @@ def invoke_bedrock(prompt: str, system_prompt: str = None, max_tokens: int = 409
         return content[0].get("text", "")
 
     return ""
+
+
+class GuardrailBlockedException(Exception):
+    """Raised when AWS Bedrock Guardrail blocks content."""
+    def __init__(self, message: str, trace: dict = None):
+        super().__init__(message)
+        self.trace = trace or {}
 
 
 def parse_json_response(text: str) -> dict:

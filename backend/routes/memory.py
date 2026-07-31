@@ -4,6 +4,8 @@ import uuid
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
+from backend.services.ai_service import GuardrailBlockedException
+
 from backend.database.connection import get_db, dict_from_row
 from backend.models.memory import (
     GenerateMemoryRequest, ApproveRequest,
@@ -66,8 +68,34 @@ def generate_memory(req: GenerateMemoryRequest):
     # AI Analysis
     try:
         analysis = analyze_documents(documents_text)
+    except GuardrailBlockedException as e:
+        # AWS Bedrock Guardrail blocked the content
+        analysis = {
+            "change_type": "BLOCKED",
+            "confidence": 0,
+            "detection_reasons": ["AWS Bedrock Guardrail blocked this content"],
+            "reasoning": {
+                "what_changed": "Content blocked by AWS Bedrock Guardrail",
+                "guardrail_message": str(e),
+            }
+        }
+        # Force BLOCKED status
+        update_memory(memory_id, status="BLOCKED", risk_level="BLOCKED",
+                      change_type="BLOCKED", confidence=0,
+                      detection_reasons=["AWS Bedrock Guardrail blocked this content"],
+                      reasoning=analysis["reasoning"],
+                      guardrail_flags=[{
+                          "type": "aws_guardrail_block",
+                          "severity": "blocked",
+                          "message": f"AWS Bedrock Guardrail: {str(e)}",
+                          "field": "content"
+                      }])
+        log_action(db, memory_id, None, "BLOCKED", risk_level="BLOCKED",
+                   details={"reason": str(e), "source": "AWS Bedrock Guardrail"})
+        db.close()
+        return get_memory(memory_id)
     except Exception as e:
-        # Log the error but don't fall back to demo data
+        # Other errors
         print(f"[ERROR] Bedrock analysis failed: {e}")
         analysis = {
             "change_type": "Unknown",
