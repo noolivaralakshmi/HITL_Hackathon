@@ -119,9 +119,9 @@ def generate_memory(req: GenerateMemoryRequest):
     detection_reasons = analysis.get("detection_reasons", [])
     reasoning = analysis.get("reasoning", {})
 
-    # Duplicate detection - check if similar memory already exists
+    # Duplicate detection - check if similar VERIFIED memory already exists
     existing = db.execute(
-        "SELECT id, change_type, status, confidence, approved_by FROM memories WHERE change_type = ? AND id != ?",
+        "SELECT id, change_type, status, confidence, approved_by FROM memories WHERE change_type = ? AND id != ? AND status = 'VERIFIED'",
         (change_type, memory_id)
     ).fetchall()
     duplicate_warning = None
@@ -131,7 +131,7 @@ def generate_memory(req: GenerateMemoryRequest):
             "exists": True,
             "count": len(existing_list),
             "memories": existing_list,
-            "message": f"A memory for '{change_type}' already exists ({len(existing_list)} record{'s' if len(existing_list) > 1 else ''}). You may want to update the existing memory instead of creating a new one."
+            "message": f"A verified memory for '{change_type}' already exists. You may want to update the existing memory instead of creating a new one."
         }
 
     # Missing info detection
