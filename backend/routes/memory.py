@@ -67,7 +67,17 @@ def generate_memory(req: GenerateMemoryRequest):
     try:
         analysis = analyze_documents(documents_text)
     except Exception as e:
-        analysis = get_demo_analysis()
+        # Log the error but don't fall back to demo data
+        print(f"[ERROR] Bedrock analysis failed: {e}")
+        analysis = {
+            "change_type": "Unknown",
+            "confidence": 0,
+            "detection_reasons": [f"AI analysis failed: {str(e)}"],
+            "reasoning": {
+                "what_changed": "Analysis could not be completed. Please try again.",
+                "error": str(e)
+            }
+        }
 
     # Extract AI results
     change_type = analysis.get("change_type", "Unknown")
