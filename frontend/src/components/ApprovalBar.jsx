@@ -22,9 +22,11 @@ export default function ApprovalBar({ memory, onApprove, onReject, onEdit, onDis
 
   useEffect(() => {
     api.get('/users/reviewers').then(res => {
-      setReviewers(res.data?.reviewers || [])
-      if (res.data?.reviewers?.length > 0) {
-        setSelectedReviewer(res.data.reviewers[0].id)
+      // Filter out current user - can't review your own work
+      const others = (res.data?.reviewers || []).filter(r => r.id !== currentUser?.id)
+      setReviewers(others)
+      if (others.length > 0) {
+        setSelectedReviewer(others[0].id)
       }
     }).catch(() => {})
   }, [])
