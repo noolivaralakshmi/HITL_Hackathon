@@ -108,5 +108,11 @@ def get_dashboard(user_id: str):
         ).fetchall()
         dashboard["tabs"]["rejected"] = [dict_from_row(r) for r in rejected]
 
+    # Total verified knowledge count (visible to all users)
+    verified_count = db.execute(
+        "SELECT COUNT(*) as count FROM memories WHERE status = 'VERIFIED'"
+    ).fetchone()
+    dashboard["verified_knowledge_count"] = verified_count["count"] if verified_count else 0
+
     db.close()
     return dashboard

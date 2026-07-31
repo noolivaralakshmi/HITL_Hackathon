@@ -120,6 +120,7 @@ export default function DashboardPage() {
   const totalContributions = getCount('contributed')
   const pendingCount = getCount('pending_review')
   const approvedCount = getCount('approved')
+  const verifiedKnowledgeCount = dashboard?.verified_knowledge_count || 0
   const currentItems = dashboard?.tabs?.[activeTab] || []
 
   return (
@@ -133,7 +134,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className={`grid gap-4 mb-8 ${isReviewer ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-2'}`}>
+      <div className={`grid gap-4 mb-8 ${isReviewer ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-3'}`}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-gradient-to-br from-primary-600/10 to-primary-600/5 border border-primary-500/20 rounded-xl p-5">
           <div className="flex items-center justify-between">
@@ -174,19 +175,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </motion.div>
-
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="bg-gradient-to-br from-violet-600/10 to-violet-600/5 border border-violet-500/20 rounded-xl p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-white/40 uppercase tracking-wider font-medium">Verified Knowledge</p>
-                  <p className="text-3xl font-bold text-white mt-1">{approvedCount}</p>
-                </div>
-                <div className="w-12 h-12 bg-violet-600/20 rounded-xl flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-violet-400" />
-                </div>
-              </div>
-            </motion.div>
           </>
         )}
 
@@ -206,6 +194,22 @@ export default function DashboardPage() {
             </div>
           </motion.div>
         )}
+
+        {/* Verified Knowledge - shown to ALL users */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: isReviewer ? 0.4 : 0.3 }}
+          className="bg-gradient-to-br from-violet-600/10 to-violet-600/5 border border-violet-500/20 rounded-xl p-5 cursor-pointer hover:border-violet-400/40 transition-all"
+          onClick={() => navigate('/query')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-white/40 uppercase tracking-wider font-medium">Verified Knowledge</p>
+              <p className="text-3xl font-bold text-white mt-1">{verifiedKnowledgeCount}</p>
+            </div>
+            <div className="w-12 h-12 bg-violet-600/20 rounded-xl flex items-center justify-center">
+              <Activity className="w-6 h-6 text-violet-400" />
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Tabs */}
