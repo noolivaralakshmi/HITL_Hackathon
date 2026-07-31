@@ -40,7 +40,7 @@ export default function Layout({ children }) {
             </div>
 
             {/* Navigation */}
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon
                 const isActive = location.pathname === item.path || 
@@ -49,14 +49,14 @@ export default function Layout({ children }) {
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-base font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-white/[0.08] text-white border border-white/[0.1]'
-                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                        ? 'bg-primary-600/20 text-white border border-primary-500/40 shadow-lg shadow-primary-600/10'
+                        : 'text-white/50 hover:text-white hover:bg-white/[0.06] border border-transparent'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden md:inline">{item.label}</span>
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
                   </button>
                 )
               })}
