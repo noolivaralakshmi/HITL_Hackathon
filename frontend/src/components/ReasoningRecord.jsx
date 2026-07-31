@@ -1,5 +1,36 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Target, Lightbulb, XCircle, AlertTriangle, Puzzle, FileText, Users, Calendar } from 'lucide-react'
+import { ArrowRight, Target, Lightbulb, XCircle, AlertTriangle, Puzzle, FileText, Users, Calendar, ExternalLink } from 'lucide-react'
+import api from '../api/client'
+
+function EvidenceLink({ document, memoryId }) {
+  const [url, setUrl] = useState(null)
+
+  useEffect(() => {
+    if (memoryId) {
+      api.get(`/documents/memory/${memoryId}`)
+        .then(res => {
+          const docs = res.data?.documents || []
+          const match = docs.find(d =>
+            d.filename === document ||
+            d.filename.toLowerCase().includes(document.toLowerCase().replace('.pdf', '').replace('.txt', ''))
+          )
+          if (match?.download_url) setUrl(match.download_url)
+        })
+        .catch(() => {})
+    }
+  }, [document, memoryId])
+
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="text-sm font-medium text-blue-400 hover:text-blue-300 underline underline-offset-2 flex items-center gap-1">
+        {document} <ExternalLink className="w-3 h-3" />
+      </a>
+    )
+  }
+  return <p className="text-sm font-medium text-white">{document}</p>
+}
 
 const sectionIcons = {
   what_changed: ArrowRight,
@@ -18,7 +49,7 @@ const sectionIcons = {
   dependencies: Puzzle,
 }
 
-export default function ReasoningRecord({ reasoning }) {
+export default function ReasoningRecord({ reasoning, memoryId }) {
   if (!reasoning || Object.keys(reasoning).length === 0) return null
 
   const renderSection = (key, value, idx) => {
@@ -67,7 +98,7 @@ export default function ReasoningRecord({ reasoning }) {
             <div key={i} className="flex items-start gap-3 p-2 bg-white/5 rounded-lg">
               <FileText className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-white">{ev.document}</p>
+                <EvidenceLink document={ev.document} memoryId={memoryId} />
                 <p className="text-xs text-white/50">{ev.supports}</p>
               </div>
             </div>

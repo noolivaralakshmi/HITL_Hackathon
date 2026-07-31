@@ -9,6 +9,10 @@ BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.amazon.nova-2-lite-v1:
 BEDROCK_GUARDRAIL_ID = os.environ.get("BEDROCK_GUARDRAIL_ID", "ka5t8n9etx95")
 BEDROCK_GUARDRAIL_VERSION = os.environ.get("BEDROCK_GUARDRAIL_VERSION", "5")
 
+# S3 Configuration for document storage
+S3_BUCKET = os.environ.get("S3_BUCKET", "hitl-change-impact-memory-docs")
+S3_PREFIX = os.environ.get("S3_PREFIX", "organizational-memory/")
+
 # Role definitions
 # contributor: can upload docs, create memory, edit, discard, send for approval
 # contributor+reviewer: all of above + can approve/reject memories assigned to them

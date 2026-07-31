@@ -353,7 +353,7 @@ export default function CreateMemoryPage() {
                     onCancel={() => setIsEditing(false)}
                   />
                 ) : (
-                  <ReasoningRecord reasoning={memory.reasoning} />
+                  <ReasoningRecord reasoning={memory.reasoning} memoryId={memory.id} />
                 )}
 
                 <MissingInfo items={memory.missing_info} />

@@ -1,19 +1,20 @@
 """Document upload routes."""
 import uuid
 from datetime import datetime
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File
 from typing import List
 
 from backend.database.connection import get_db, dict_from_row
-from backend.services.document_service import extract_text, save_document
+from backend.services.document_service import extract_text
 from backend.services.guardrail_service import detect_pii
+from backend.services.s3_service import upload_to_s3, generate_presigned_url
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 
 @router.post("/upload")
 async def upload_documents(files: List[UploadFile] = File(...)):
-    """Upload documents, extract text, scan for PII, and redact if found."""
+    """Upload documents: extract text, scan PII, store original in S3."""
     db = get_db()
     uploaded = []
     pii_warnings = []
@@ -23,7 +24,10 @@ async def upload_documents(files: List[UploadFile] = File(...)):
         text = extract_text(file.filename, content)
         file_type = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "txt"
 
-        # Scan for PII in document content
+        # Upload original file to S3
+        s3_key = upload_to_s3(content, file.filename)
+
+        # Scan for PII in extracted text
         flags, redacted_text = detect_pii(text)
         if flags:
             pii_warnings.append({
@@ -31,40 +35,53 @@ async def upload_documents(files: List[UploadFile] = File(...)):
                 "issues": [f["message"] for f in flags],
                 "redacted": True
             })
-            # Store the redacted version — never store raw PII
             text = redacted_text
 
-        doc = save_document(db, file.filename, file_type, text)
-        uploaded.append(doc)
+        # Save to DB
+        doc_id = str(uuid.uuid4())
+        db.execute(
+            """INSERT INTO documents (id, memory_id, filename, file_type, content, s3_key, uploaded_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (doc_id, None, file.filename, file_type, text, s3_key, datetime.utcnow().isoformat())
+        )
+        db.commit()
+        uploaded.append({"id": doc_id, "filename": file.filename, "file_type": file_type, "s3_key": s3_key})
 
     db.close()
 
     result = {"documents": uploaded, "count": len(uploaded)}
     if pii_warnings:
         result["pii_warnings"] = pii_warnings
-        result["message"] = f"PII detected and redacted in {len(pii_warnings)} document(s). Sensitive information has been removed."
-
+        result["message"] = f"PII detected and redacted in {len(pii_warnings)} document(s)."
     return result
 
 
 @router.get("/{document_id}")
 def get_document(document_id: str):
-    """Get a single document."""
+    """Get a single document with download URL."""
     db = get_db()
     row = db.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
     db.close()
     if not row:
         return {"error": "Document not found"}, 404
-    return dict_from_row(row)
+    doc = dict_from_row(row)
+    if doc.get("s3_key"):
+        doc["download_url"] = generate_presigned_url(doc["s3_key"])
+    return doc
 
 
 @router.get("/memory/{memory_id}")
 def get_documents_by_memory(memory_id: str):
-    """Get all documents for a memory."""
+    """Get all documents for a memory with download URLs."""
     db = get_db()
     rows = db.execute(
-        "SELECT id, filename, file_type, uploaded_at FROM documents WHERE memory_id = ?",
+        "SELECT id, filename, file_type, s3_key, uploaded_at FROM documents WHERE memory_id = ?",
         (memory_id,)
     ).fetchall()
     db.close()
-    return {"documents": [dict_from_row(r) for r in rows]}
+    docs = [dict_from_row(r) for r in rows]
+    # Add download URLs
+    for doc in docs:
+        if doc.get("s3_key"):
+            doc["download_url"] = generate_presigned_url(doc["s3_key"])
+    return {"documents": docs}

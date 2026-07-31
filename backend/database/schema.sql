@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS documents (
     filename TEXT NOT NULL,
     file_type TEXT NOT NULL,
     content TEXT NOT NULL,
+    s3_key TEXT,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (memory_id) REFERENCES memories(id)
 );
