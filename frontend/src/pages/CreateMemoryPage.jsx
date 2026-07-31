@@ -37,6 +37,7 @@ export default function CreateMemoryPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const [auditLog, setAuditLog] = useState([])
   const [existingMemories, setExistingMemories] = useState([])
+  const [duplicateWarning, setDuplicateWarning] = useState(null)
 
   // No auto-loading — always start fresh on the upload step
 
@@ -74,6 +75,12 @@ export default function CreateMemoryPage() {
       // Generate memory
       const genRes = await generateMemory(docIds, currentUser.id)
       setMemory(genRes.data)
+
+      // Check for duplicate warning
+      if (genRes.data.duplicate_warning) {
+        setDuplicateWarning(genRes.data.duplicate_warning)
+      }
+
       setStep(2)
 
       // Load audit log
@@ -267,6 +274,45 @@ export default function CreateMemoryPage() {
                         </ul>
                       </div>
                     ))}
+                  </motion.div>
+                )}
+
+                {duplicateWarning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card p-5 border-amber-500/30 bg-amber-500/5"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-9 h-9 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                        <span className="text-amber-400 text-lg">⚠️</span>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-amber-300">Similar Memory Already Exists</h4>
+                        <p className="text-xs text-white/40">{duplicateWarning.message}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {duplicateWarning.memories.map((mem, idx) => (
+                        <div key={idx} className="p-3 bg-amber-500/5 rounded-lg border border-amber-500/10 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-white/80 font-medium">{mem.change_type}</p>
+                            <p className="text-xs text-white/40">
+                              Status: {mem.status} · Confidence: {mem.confidence}%
+                              {mem.approved_by && ` · Approved`}
+                            </p>
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            mem.status === 'VERIFIED' ? 'bg-emerald-500/20 text-emerald-300' :
+                            mem.status === 'DRAFT' ? 'bg-blue-500/20 text-blue-300' :
+                            'bg-gray-500/20 text-gray-300'
+                          }`}>{mem.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-amber-300/60 mt-3">
+                      You can still create a new memory, or you can update the existing one by adding new documents through the Review Assistant chat.
+                    </p>
                   </motion.div>
                 )}
 

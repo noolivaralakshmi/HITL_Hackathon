@@ -118,6 +118,21 @@ def generate_memory(req: GenerateMemoryRequest):
     detection_reasons = analysis.get("detection_reasons", [])
     reasoning = analysis.get("reasoning", {})
 
+    # Duplicate detection - check if similar memory already exists
+    existing = db.execute(
+        "SELECT id, change_type, status, confidence, approved_by FROM memories WHERE change_type = ? AND id != ?",
+        (change_type, memory_id)
+    ).fetchall()
+    duplicate_warning = None
+    if existing:
+        existing_list = [dict(row) for row in existing]
+        duplicate_warning = {
+            "exists": True,
+            "count": len(existing_list),
+            "memories": existing_list,
+            "message": f"A memory for '{change_type}' already exists ({len(existing_list)} record{'s' if len(existing_list) > 1 else ''}). You may want to update the existing memory instead of creating a new one."
+        }
+
     # Missing info detection
     try:
         missing_result = detect_missing_info(reasoning, change_type)
@@ -177,7 +192,11 @@ def generate_memory(req: GenerateMemoryRequest):
     create_snapshot(memory_id, "INITIAL_DRAFT")
 
     db.close()
-    return get_memory(memory_id)
+
+    result = get_memory(memory_id)
+    if duplicate_warning:
+        result["duplicate_warning"] = duplicate_warning
+    return result
 
 
 @router.get("")
@@ -293,6 +312,102 @@ def rollback(memory_id: str, req: RollbackRequest):
 def get_memory_snapshots(memory_id: str):
     """Get all snapshots for a memory."""
     return {"snapshots": get_snapshots(memory_id)}
+
+
+@router.post("/{memory_id}/add-documents")
+def add_documents_to_memory(memory_id: str, req: GenerateMemoryRequest):
+    """Add new documents to an existing memory and re-analyze.
+
+    This allows updating a verified memory with new evidence.
+    The memory goes back to DRAFT status for re-review.
+    """
+    memory = get_memory(memory_id)
+    if not memory:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    db = get_db()
+
+    # Get new documents
+    placeholders = ",".join("?" * len(req.document_ids))
+    new_docs = db.execute(
+        f"SELECT * FROM documents WHERE id IN ({placeholders})",
+        req.document_ids
+    ).fetchall()
+
+    if not new_docs:
+        raise HTTPException(status_code=404, detail="No new documents found")
+
+    # Link new documents to memory
+    for doc_id in req.document_ids:
+        db.execute("UPDATE documents SET memory_id = ? WHERE id = ?", (memory_id, doc_id))
+    db.commit()
+
+    # Get ALL documents for this memory (old + new)
+    all_docs = db.execute(
+        "SELECT * FROM documents WHERE memory_id = ?", (memory_id,)
+    ).fetchall()
+
+    # Combine all document text
+    documents_text = "\n\n".join([
+        f"=== {doc['filename']} ===\n{doc['content']}"
+        for doc in all_docs
+    ])
+
+    # Mask PII
+    from backend.services.guardrail_service import detect_pii
+    pii_flags_docs, documents_text_safe = detect_pii(documents_text)
+
+    # Create snapshot before update
+    create_snapshot(memory_id, "PRE_UPDATE")
+
+    # Re-analyze with all documents
+    try:
+        analysis = analyze_documents(documents_text_safe)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+    # Update memory with new analysis, reset to DRAFT
+    change_type = analysis.get("change_type", memory.get("change_type", "Unknown"))
+    confidence = analysis.get("confidence", 0)
+    reasoning = analysis.get("reasoning", {})
+
+    # Missing info
+    try:
+        missing_result = detect_missing_info(reasoning, change_type)
+        missing_info = [item["message"] for item in missing_result.get("missing_items", [])]
+    except Exception:
+        missing_info = []
+
+    update_memory(
+        memory_id,
+        change_type=change_type,
+        confidence=confidence,
+        detection_reasons=analysis.get("detection_reasons", []),
+        reasoning=reasoning,
+        missing_info=missing_info,
+        status="DRAFT",
+        approved_by=None,
+        approved_at=None,
+    )
+
+    # Log the update
+    log_action(db, memory_id, req.user_id, "EDITED", details={
+        "action": "new_documents_added",
+        "new_document_count": len(new_docs),
+        "total_document_count": len(all_docs),
+        "documents_added": [doc["filename"] for doc in new_docs],
+    }, human_decision="Added new documents and re-analyzed")
+
+    # Remove from FTS (needs re-approval to be queryable again)
+    try:
+        db.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
+    except Exception:
+        pass
+
+    db.commit()
+    db.close()
+
+    return get_memory(memory_id)
 
 
 def log_action(db, memory_id, user_id, action, risk_level=None, details=None, ai_output=None, human_decision=None):

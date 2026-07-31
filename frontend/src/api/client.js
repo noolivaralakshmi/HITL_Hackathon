@@ -41,6 +41,9 @@ export const editMemoryReasoning = (memoryId, userId, reasoning) =>
 export const rollbackMemory = (memoryId, userId, reason) =>
   api.post(`/memory/${memoryId}/rollback`, { user_id: userId, reason })
 
+export const addDocumentsToMemory = (memoryId, documentIds, userId) =>
+  api.post(`/memory/${memoryId}/add-documents`, { document_ids: documentIds, user_id: userId })
+
 export const getSnapshots = (memoryId) =>
   api.get(`/memory/${memoryId}/snapshots`)
 
