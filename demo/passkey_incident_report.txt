@@ -1,0 +1,61 @@
+INCIDENT REPORT
+Incident ID: INC-2026-0847
+Date: July 18, 2026
+Severity: P3 (Medium)
+Status: RESOLVED
+
+TITLE: Passkey Enrollment Service Outage During Full Rollout
+
+TIMELINE:
+- 09:15 AM: Engineering team reports passkey enrollment failures
+- 09:22 AM: Monitoring alerts fire - enrollment API returning 503
+- 09:28 AM: On-call engineer acknowledges, begins investigation
+- 09:45 AM: Root cause identified - certificate expiry on WebAuthn RP server
+- 09:52 AM: Certificate renewed and deployed
+- 10:01 AM: Service restored, enrollment working normally
+- 10:30 AM: All queued enrollments processed successfully
+
+IMPACT:
+- Duration: 46 minutes
+- Users affected: ~340 (attempting enrollment during window)
+- Users blocked from login: 0 (existing passkeys unaffected)
+- Data loss: None
+- Revenue impact: None
+
+ROOT CAUSE:
+The TLS certificate for the WebAuthn Relying Party (RP) server expired.
+The certificate was provisioned manually during pilot and not added to
+the automated certificate rotation managed by AWS Certificate Manager.
+
+This was a gap in the pilot-to-production handoff checklist.
+
+RESOLUTION:
+1. Renewed certificate immediately (manual)
+2. Migrated certificate to ACM with auto-renewal
+3. Added certificate expiry monitoring (CloudWatch alarm at 30 days)
+
+CORRECTIVE ACTIONS:
+- [DONE] Migrate all WebAuthn certificates to ACM auto-renewal
+- [DONE] Add certificate expiry to runbook pre-checks
+- [IN PROGRESS] Audit all manually provisioned certificates across auth stack
+- [PLANNED] Add enrollment service health check to daily automated tests
+
+LESSONS LEARNED:
+- Pilot infrastructure shortcuts must be fully productionized before rollout
+- Certificate management should be automated from Day 1, not retrofitted
+- The fallback authentication (password) worked correctly during outage
+- No users were locked out because existing passkeys continued to work
+
+UPDATED ASSUMPTIONS:
+- Original assumption: "IT support can handle 5% fallback cases manually"
+  Status: VALIDATED - password fallback worked perfectly during this incident
+- New assumption needed: "All infrastructure certificates must be in ACM"
+
+RISK REGISTER UPDATE:
+- Add new risk: "Infrastructure components provisioned during pilot may have
+  manual configurations that don't meet production standards"
+- Mitigation: Production readiness checklist audit (scheduled August 2026)
+
+Reported by: Priya Patel, Infrastructure Lead
+Reviewed by: Marcus Johnson, VP Engineering
+
