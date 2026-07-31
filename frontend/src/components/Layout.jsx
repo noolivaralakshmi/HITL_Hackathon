@@ -81,10 +81,11 @@ export default function Layout({ children }) {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors text-white/30 hover:text-white/70"
+                className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors text-red-400 hover:text-red-300 text-sm flex items-center gap-1.5"
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
