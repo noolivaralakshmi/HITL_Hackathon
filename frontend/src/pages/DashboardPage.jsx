@@ -14,11 +14,25 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (currentUser) {
+      setLoading(true)
       api.get(`/users/${currentUser.id}/dashboard`)
         .then(res => setDashboard(res.data))
         .catch(() => {})
         .finally(() => setLoading(false))
     }
+  }, [currentUser])
+
+  // Also refetch when page gains focus (coming back from another page)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (currentUser) {
+        api.get(`/users/${currentUser.id}/dashboard`)
+          .then(res => setDashboard(res.data))
+          .catch(() => {})
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
   }, [currentUser])
 
   const handleSendReminder = async (memoryId) => {
