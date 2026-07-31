@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
-import { FileText, Clock, CheckCircle, XCircle, Bell, ArrowRight, Brain, TrendingUp, Shield, Activity } from 'lucide-react'
+import { FileText, Clock, CheckCircle, XCircle, Bell, ArrowRight, Brain, TrendingUp, Shield, Activity, Upload, MessageSquare } from 'lucide-react'
 import api from '../api/client'
 
 export default function DashboardPage() {
@@ -261,23 +261,33 @@ export default function DashboardPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20"
+            className="glass-card p-10 text-center"
           >
-            <div className="w-16 h-16 mx-auto mb-4 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
-              <FileText className="w-8 h-8 text-white/20" />
+            <div className="max-w-md mx-auto">
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-primary-600/20 to-violet-600/10 rounded-2xl flex items-center justify-center border border-primary-500/20">
+                <Brain className="w-10 h-10 text-primary-400/60" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                {activeTab === 'contributed' ? 'No contributions yet' :
+                 activeTab === 'pending_review' ? 'All caught up!' :
+                 activeTab === 'approved' ? 'No approved memories' :
+                 'No rejected memories'}
+              </h3>
+              <p className="text-sm text-white/40 mb-6 leading-relaxed">
+                {activeTab === 'contributed' ? 'Upload documents and create your first organizational memory. Your contributions help the team make better decisions.' :
+                 activeTab === 'pending_review' ? 'There are no memories waiting for your review right now. Check back later or create your own contribution.' :
+                 activeTab === 'approved' ? 'Memories you approve will appear here as part of your verified knowledge base.' :
+                 'Rejected memories will appear here for reference.'}
+              </p>
+              <div className="flex items-center justify-center gap-4">
+                <button onClick={() => navigate('/create')} className="btn-primary text-sm flex items-center gap-2">
+                  <Upload className="w-4 h-4" /> Create Memory
+                </button>
+                <button onClick={() => navigate('/query')} className="btn-secondary text-sm flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" /> Ask Knowledge
+                </button>
+              </div>
             </div>
-            <p className="text-lg text-white/30 font-medium">No items yet</p>
-            <p className="text-sm text-white/20 mt-1">
-              {activeTab === 'contributed' ? 'Create your first organizational memory to get started.' :
-               activeTab === 'pending_review' ? 'No memories are waiting for your review.' :
-               activeTab === 'approved' ? "You haven't approved any memories yet." :
-               "No rejected memories."}
-            </p>
-            {activeTab === 'contributed' && (
-              <button onClick={() => navigate('/create')} className="btn-primary text-sm mt-6">
-                Create Your First Memory
-              </button>
-            )}
           </motion.div>
         ) : (
           currentItems.map((mem, idx) => (
