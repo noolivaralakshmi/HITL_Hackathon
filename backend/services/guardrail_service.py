@@ -1,97 +1,103 @@
-"""Guardrail check service - PII detection, redaction, harmful content, unsupported claims."""
+"""Guardrail check service - local PII detection + AWS Bedrock Guardrails integration.
+
+The AWS Bedrock Guardrail (ka5t8n9etx95) handles:
+- PII ANONYMIZATION (replaces with placeholders, does NOT block)
+- Credential BLOCKING (passwords, AWS keys, API keys)
+- Content filtering (harmful, hate, violence)
+
+This local service provides:
+- Pre-upload PII scanning with redaction
+- Confidence threshold checks
+- Additional AI-based checks
+"""
 import re
 import json
 from backend.services.ai_service import run_guardrail_check
 
 
 # ============================================================
-# PII PATTERNS - Comprehensive detection
+# LOCAL PII PATTERNS - All set to WARNING or ANONYMIZE (never block)
+# AWS Bedrock Guardrails handles blocking decisions
 # ============================================================
 
 PII_PATTERNS = {
     "ssn": {
         "pattern": r"\b\d{3}-\d{2}-\d{4}\b",
-        "replacement": "[SSN REDACTED]",
-        "severity": "blocked",
-        "message": "Social Security Number detected and redacted"
-    },
-    "ssn_no_dash": {
-        "pattern": r"\b\d{9}\b(?!\d)",
-        "replacement": "[SSN REDACTED]",
-        "severity": "blocked",
-        "message": "Possible SSN (9 consecutive digits) detected and redacted"
+        "replacement": "###-##-####",
+        "severity": "warning",
+        "message": "Social Security Number detected and masked"
     },
     "credit_card": {
         "pattern": r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",
-        "replacement": "[CREDIT CARD REDACTED]",
-        "severity": "blocked",
-        "message": "Credit card number detected and redacted"
+        "replacement": "####-####-####-####",
+        "severity": "warning",
+        "message": "Credit card number detected and masked"
     },
     "password_field": {
         "pattern": r"(?i)(password|passwd|pwd)\s*[:=]\s*\S+",
-        "replacement": "[PASSWORD REDACTED]",
-        "severity": "blocked",
-        "message": "Password value detected and redacted"
+        "replacement": "[PASSWORD MASKED]",
+        "severity": "critical",
+        "message": "Password value detected and masked"
     },
     "password_quoted": {
         "pattern": r"(?i)(password|passwd|pwd)\s*[:=]\s*[\"'][^\"']+[\"']",
-        "replacement": "[PASSWORD REDACTED]",
-        "severity": "blocked",
-        "message": "Password in quotes detected and redacted"
+        "replacement": "[PASSWORD MASKED]",
+        "severity": "critical",
+        "message": "Password in quotes detected and masked"
     },
     "api_key": {
         "pattern": r"(?i)(api[_-]?key|apikey|api[_-]?secret|secret[_-]?key)\s*[:=]\s*\S+",
-        "replacement": "[API KEY REDACTED]",
-        "severity": "blocked",
-        "message": "API key or secret detected and redacted"
+        "replacement": "[API KEY MASKED]",
+        "severity": "critical",
+        "message": "API key or secret detected and masked"
     },
     "aws_access_key": {
         "pattern": r"\b(AKIA[0-9A-Z]{16})\b",
-        "replacement": "[AWS KEY REDACTED]",
-        "severity": "blocked",
-        "message": "AWS access key detected and redacted"
+        "replacement": "[AWS KEY MASKED]",
+        "severity": "critical",
+        "message": "AWS access key detected and masked"
     },
     "private_key": {
         "pattern": r"-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----",
-        "replacement": "[PRIVATE KEY REDACTED]",
-        "severity": "blocked",
-        "message": "Private key detected and redacted"
+        "replacement": "[PRIVATE KEY MASKED]",
+        "severity": "critical",
+        "message": "Private key detected and masked"
     },
     "email_personal": {
         "pattern": r"\b[A-Za-z0-9._%+-]+@(gmail|yahoo|hotmail|outlook|aol|icloud|protonmail)\.(com|net|org)\b",
-        "replacement": "[PERSONAL EMAIL REDACTED]",
-        "severity": "critical",
-        "message": "Personal email address detected and redacted"
+        "replacement": "######@######",
+        "severity": "warning",
+        "message": "Personal email address detected and masked"
     },
     "phone_us": {
         "pattern": r"\b(\+1[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b",
-        "replacement": "[PHONE REDACTED]",
+        "replacement": "(###) ###-####",
         "severity": "warning",
-        "message": "Phone number detected (verify if business or personal)"
+        "message": "Phone number detected and masked"
     },
     "ip_address": {
         "pattern": r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b",
-        "replacement": "[IP ADDRESS REDACTED]",
+        "replacement": "#.#.#.#",
         "severity": "warning",
-        "message": "IP address detected (may be sensitive infrastructure info)"
+        "message": "IP address detected and masked"
     },
     "drivers_license": {
         "pattern": r"(?i)(driver'?s?\s*license|DL)\s*#?\s*[:=]?\s*[A-Z0-9]{6,12}",
-        "replacement": "[DRIVER LICENSE REDACTED]",
-        "severity": "blocked",
-        "message": "Driver's license number detected and redacted"
+        "replacement": "[DRIVER LICENSE MASKED]",
+        "severity": "warning",
+        "message": "Driver's license number detected and masked"
     },
     "bank_account": {
         "pattern": r"(?i)(account\s*#?|acct\s*#?)\s*[:=]?\s*\d{8,17}",
-        "replacement": "[BANK ACCOUNT REDACTED]",
-        "severity": "blocked",
-        "message": "Bank account number detected and redacted"
+        "replacement": "[BANK ACCOUNT MASKED]",
+        "severity": "warning",
+        "message": "Bank account number detected and masked"
     },
     "date_of_birth": {
         "pattern": r"(?i)(date\s*of\s*birth|DOB|born)\s*[:=]?\s*\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}",
-        "replacement": "[DOB REDACTED]",
-        "severity": "critical",
-        "message": "Date of birth detected and redacted"
+        "replacement": "##/##/####",
+        "severity": "warning",
+        "message": "Date of birth detected and masked"
     },
 }
 
@@ -100,7 +106,7 @@ def detect_pii(text: str) -> tuple:
     """Detect PII in text and return (flags, redacted_text).
 
     Returns:
-        tuple: (list of flag dicts, redacted text string)
+        tuple: (list of flag dicts, masked text string)
     """
     flags = []
     redacted = text
@@ -108,7 +114,6 @@ def detect_pii(text: str) -> tuple:
     for pii_type, config in PII_PATTERNS.items():
         matches = re.findall(config["pattern"], text)
         if matches:
-            # Add flag
             flags.append({
                 "type": "pii",
                 "severity": config["severity"],
@@ -117,18 +122,13 @@ def detect_pii(text: str) -> tuple:
                 "pii_type": pii_type,
                 "count": len(matches)
             })
-            # Redact in text
             redacted = re.sub(config["pattern"], config["replacement"], redacted)
 
     return flags, redacted
 
 
 def redact_reasoning(reasoning: dict) -> tuple:
-    """Scan and redact PII from all fields in reasoning dict.
-
-    Returns:
-        tuple: (list of flags, cleaned reasoning dict)
-    """
+    """Scan and mask PII from all fields in reasoning dict."""
     all_flags = []
     cleaned = {}
 
@@ -171,13 +171,8 @@ def redact_reasoning(reasoning: dict) -> tuple:
 
 
 def check_pii_in_documents(documents_text: str) -> tuple:
-    """Check uploaded documents for PII before processing.
-
-    Returns:
-        tuple: (list of flags, redacted documents text)
-    """
+    """Check uploaded documents for PII before processing."""
     flags, redacted = detect_pii(documents_text)
-    # Mark these as document-level PII
     for f in flags:
         f["field"] = "uploaded_documents"
         f["message"] = f"[In uploaded documents] {f['message']}"
@@ -205,17 +200,14 @@ def check_confidence_threshold(confidence: float) -> list:
 
 
 def run_guardrails(reasoning: dict, documents_text: str, confidence: float) -> dict:
-    """Run all guardrail checks: PII detection + redaction, confidence, AI checks.
+    """Run all guardrail checks.
 
-    This function:
-    1. Scans for PII patterns and REDACTS them from the reasoning
-    2. Checks confidence thresholds
-    3. Runs AI-based guardrail checks (hallucination, unsupported claims)
-    4. Returns flags, redacted reasoning, and overall safety assessment
+    Local checks: PII masking (warning level), confidence thresholds
+    AWS Bedrock Guardrail: handles blocking decisions for credentials/harmful content
     """
     all_flags = []
 
-    # 1. PII detection and redaction in reasoning
+    # 1. PII detection and masking in reasoning (warning only, never blocks)
     pii_flags, cleaned_reasoning = redact_reasoning(reasoning)
     all_flags.extend(pii_flags)
 
@@ -235,15 +227,17 @@ def run_guardrails(reasoning: dict, documents_text: str, confidence: float) -> d
             "field": None
         })
 
-    # Determine if content should be blocked
-    has_blocked = any(f.get("severity") == "blocked" for f in all_flags)
+    # Local checks never block — only AWS Bedrock Guardrail can block
+    # (blocking happens in ai_service.py when guardrail_intervened)
+    has_blocked = False
+
     has_pii = any(f.get("type") == "pii" for f in all_flags)
 
     return {
         "flags": all_flags,
-        "overall_safe": not has_blocked,
+        "overall_safe": True,
         "should_block": has_blocked,
         "has_pii": has_pii,
-        "risk_adjustment": "BLOCKED" if has_blocked else None,
+        "risk_adjustment": None,
         "cleaned_reasoning": cleaned_reasoning if has_pii else None,
     }
