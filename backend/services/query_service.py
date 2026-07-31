@@ -93,7 +93,7 @@ def fallback_query(question: str, memories: list) -> dict:
                         for alt in alternatives
                     ],
                     "evidence": [e.get("document", e) if isinstance(e, dict) else str(e) for e in evidence_docs],
-                    "approved_by": mem.get("approved_by", "Unknown"),
+                    "approved_by": mem.get("approver_name", mem.get("approved_by", "Unknown")),
                     "confidence": mem.get("confidence", 0),
                     "memory_id": mem.get("id")
                 }

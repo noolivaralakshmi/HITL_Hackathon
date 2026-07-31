@@ -137,7 +137,7 @@ export default function QueryPage() {
         {/* Approved by */}
         {answer.approved_by && (
           <p className="text-xs text-white/40">
-            Approved by: <span className="text-white/60">{answer.approved_by}</span>
+            Verified by: <span className="text-white/60">{answer.approved_by}</span>
           </p>
         )}
       </motion.div>

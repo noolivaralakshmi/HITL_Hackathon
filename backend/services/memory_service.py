@@ -97,7 +97,9 @@ def get_verified_memories() -> list:
     """Get all verified memories for Mode 2 queries."""
     db = get_db()
     rows = db.execute(
-        "SELECT * FROM memories WHERE status = 'VERIFIED' ORDER BY approved_at DESC"
+        """SELECT m.*, u.name as approver_name FROM memories m
+           LEFT JOIN users u ON m.approved_by = u.id
+           WHERE m.status = 'VERIFIED' ORDER BY m.approved_at DESC"""
     ).fetchall()
     db.close()
     return [dict_from_row(r) for r in rows]
