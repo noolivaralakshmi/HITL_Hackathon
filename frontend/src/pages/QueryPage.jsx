@@ -97,12 +97,9 @@ export default function QueryPage() {
               ))}
             </div>
           )}
-          <button
-            onClick={() => navigate('/create')}
-            className="btn-primary text-sm mt-4 flex items-center gap-2"
-          >
-            Create Organizational Memory <ArrowRight className="w-4 h-4" />
-          </button>
+          <p className="text-sm text-white/50 mt-4 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+            To create organizational memory, please reach out to the admin team or a contributor to upload relevant documents.
+          </p>
         </motion.div>
       )
     }
