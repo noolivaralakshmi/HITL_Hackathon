@@ -91,27 +91,13 @@ export default function Layout({ children }) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Quick Access Cards - Below Header */}
+        {/* Quick Access Cards - Only Create Memory and Ask Knowledge */}
         {location.pathname === '/dashboard' && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-3 gap-4 mb-8"
+            className="grid grid-cols-2 gap-4 mb-8"
           >
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-primary-600/20 via-primary-600/10 to-transparent border border-primary-500/30 hover:border-primary-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary-600/10 hover:scale-[1.02]"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-500" />
-              <div className="relative">
-                <div className="w-12 h-12 bg-primary-600/30 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <LayoutDashboard className="w-6 h-6 text-primary-400" />
-                </div>
-                <h3 className="text-lg font-bold text-white">Dashboard</h3>
-                <p className="text-xs text-white/40 mt-1">View contributions & reviews</p>
-              </div>
-            </button>
-
             <button
               onClick={() => navigate('/create')}
               className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-emerald-600/20 via-emerald-600/10 to-transparent border border-emerald-500/30 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-600/10 hover:scale-[1.02]"
