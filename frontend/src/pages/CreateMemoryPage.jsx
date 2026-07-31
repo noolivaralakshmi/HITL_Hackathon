@@ -174,18 +174,10 @@ export default function CreateMemoryPage() {
 
   const handleUpdateExisting = async (existingMemory) => {
     if (!existingMemory || !memory) return
+    setIsLoading(true)
     try {
-      // Get the document IDs that were linked to the newly created memory
-      const docsRes = await getDocumentsByMemory(memory.id)
-      const newDocIds = (docsRes.data?.documents || []).map(d => d.id)
-
-      if (newDocIds.length === 0) {
-        alert('No new documents found to add.')
-        return
-      }
-
-      // Add those documents to the existing memory and re-analyze
-      const res = await addDocumentsToMemory(existingMemory.id, newDocIds, currentUser.id)
+      // Call the merge endpoint: moves docs from new memory → existing memory, deletes new one
+      const res = await addDocumentsToMemory(existingMemory.id, [memory.id], currentUser.id)
       setMemory(res.data)
       setDuplicateWarning(null)
       await loadAuditLog(existingMemory.id)
@@ -193,6 +185,7 @@ export default function CreateMemoryPage() {
     } catch (e) {
       alert(e.response?.data?.detail || 'Failed to update existing memory.')
     }
+    setIsLoading(false)
   }
 
   const handleRollback = async (reason) => {

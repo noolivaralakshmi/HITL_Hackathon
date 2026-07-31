@@ -314,6 +314,106 @@ def get_memory_snapshots(memory_id: str):
     return {"snapshots": get_snapshots(memory_id)}
 
 
+@router.post("/{memory_id}/merge")
+def merge_memory(memory_id: str, req: dict):
+    """Merge documents from a source memory into this memory and re-analyze.
+
+    Used when duplicate is detected: moves docs from the new (duplicate) memory
+    into the existing one, deletes the duplicate, and re-analyzes.
+    """
+    source_memory_id = req.get("source_memory_id")
+    user_id = req.get("user_id")
+
+    if not source_memory_id or not user_id:
+        raise HTTPException(status_code=400, detail="source_memory_id and user_id required")
+
+    target = get_memory(memory_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="Target memory not found")
+
+    db = get_db()
+
+    # Move documents from source memory to target memory
+    docs_moved = db.execute(
+        "UPDATE documents SET memory_id = ? WHERE memory_id = ?",
+        (memory_id, source_memory_id)
+    ).rowcount
+    db.commit()
+
+    # Delete the source (duplicate) memory
+    db.execute("DELETE FROM action_log WHERE memory_id = ?", (source_memory_id,))
+    db.execute("DELETE FROM chat_messages WHERE memory_id = ?", (source_memory_id,))
+    db.execute("DELETE FROM memory_snapshots WHERE memory_id = ?", (source_memory_id,))
+    db.execute("DELETE FROM memories WHERE id = ?", (source_memory_id,))
+    db.commit()
+
+    # Get ALL documents now attached to target memory
+    all_docs = db.execute(
+        "SELECT * FROM documents WHERE memory_id = ?", (memory_id,)
+    ).fetchall()
+
+    # Combine all document text
+    documents_text = "\n\n".join([
+        f"=== {doc['filename']} ===\n{doc['content']}"
+        for doc in all_docs
+    ])
+
+    # Mask PII
+    from backend.services.guardrail_service import detect_pii
+    _, documents_text_safe = detect_pii(documents_text)
+
+    # Create snapshot before update
+    create_snapshot(memory_id, "PRE_MERGE_UPDATE")
+
+    # Re-analyze with all documents
+    try:
+        analysis = analyze_documents(documents_text_safe)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Re-analysis failed: {str(e)}")
+
+    # Update memory
+    change_type = analysis.get("change_type", target.get("change_type", "Unknown"))
+    confidence = analysis.get("confidence", 0)
+    reasoning = analysis.get("reasoning", {})
+
+    try:
+        missing_result = detect_missing_info(reasoning, change_type)
+        missing_info = [item["message"] for item in missing_result.get("missing_items", [])]
+    except Exception:
+        missing_info = []
+
+    update_memory(
+        memory_id,
+        change_type=change_type,
+        confidence=confidence,
+        detection_reasons=analysis.get("detection_reasons", []),
+        reasoning=reasoning,
+        missing_info=missing_info,
+        status="DRAFT",
+        approved_by=None,
+        approved_at=None,
+    )
+
+    # Log
+    log_action(db, memory_id, user_id, "EDITED", details={
+        "action": "merged_from_duplicate",
+        "source_memory_deleted": source_memory_id,
+        "documents_moved": docs_moved,
+        "total_documents": len(all_docs),
+    }, human_decision="Merged new documents into existing memory")
+
+    # Remove from FTS
+    try:
+        db.execute("DELETE FROM memory_fts WHERE memory_id = ?", (memory_id,))
+    except Exception:
+        pass
+
+    db.commit()
+    db.close()
+
+    return get_memory(memory_id)
+
+
 @router.post("/{memory_id}/add-documents")
 def add_documents_to_memory(memory_id: str, req: GenerateMemoryRequest):
     """Add new documents to an existing memory and re-analyze.
