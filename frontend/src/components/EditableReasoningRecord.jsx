@@ -163,13 +163,43 @@ export default function EditableReasoningRecord({ reasoning, onSave, onCancel })
         {renderAlternatives()}
         {renderListField('risks_accepted', 'Risks Accepted')}
         {renderListField('assumptions', 'Assumptions')}
-        {renderStringField('rollback_strategy', 'Rollback Strategy')}
-        {renderStringField('risk_owners', 'Risk Owners')}
-        {renderStringField('success_criteria', 'Success Criteria')}
-        {renderStringField('communication_plan', 'Communication Plan')}
-        {renderStringField('dependencies', 'Dependencies')}
+        {edited.rollback_strategy !== undefined && renderStringField('rollback_strategy', 'Rollback Strategy')}
+        {edited.risk_owners !== undefined && renderStringField('risk_owners', 'Risk Owners')}
+        {edited.success_criteria !== undefined && renderStringField('success_criteria', 'Success Criteria')}
+        {edited.communication_plan !== undefined && renderStringField('communication_plan', 'Communication Plan')}
+        {edited.dependencies !== undefined && renderStringField('dependencies', 'Dependencies')}
         {renderStringField('timeline', 'Timeline')}
         {renderStringField('additional_context', 'Additional Context')}
+
+        {/* Add Missing Fields */}
+        {(() => {
+          const missingFields = [
+            { key: 'rollback_strategy', label: 'Rollback Strategy' },
+            { key: 'risk_owners', label: 'Risk Owners' },
+            { key: 'success_criteria', label: 'Success Criteria' },
+            { key: 'communication_plan', label: 'Communication Plan' },
+            { key: 'dependencies', label: 'Dependencies' },
+          ].filter(f => edited[f.key] === undefined)
+
+          if (missingFields.length === 0) return null
+
+          return (
+            <div className="pt-4 border-t border-white/10">
+              <p className="text-xs text-white/40 uppercase tracking-wider font-medium mb-3">Add Missing Information</p>
+              <div className="flex flex-wrap gap-2">
+                {missingFields.map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setEdited(prev => ({ ...prev, [f.key]: '' }))}
+                    className="text-xs px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-lg hover:bg-amber-500/20 transition-all"
+                  >
+                    + {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Save/Cancel at bottom too */}
         <div className="flex items-center gap-3 pt-4 border-t border-white/10">
