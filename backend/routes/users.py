@@ -66,11 +66,11 @@ def get_dashboard(user_id: str):
     user_dict = dict_from_row(user)
     dashboard = {"user": user_dict, "tabs": {}}
 
-    # Tab 1: My Contributions (all roles see this)
+    # Tab 1: My Contributions (only show memories that were sent for review, approved, or rejected - not drafts/discarded)
     contributions = db.execute(
         """SELECT m.*, u.name as reviewer_name FROM memories m
            LEFT JOIN users u ON m.assigned_reviewer = u.id
-           WHERE m.contributor_id = ?
+           WHERE m.contributor_id = ? AND m.status IN ('PENDING_REVIEW', 'VERIFIED', 'REJECTED')
            ORDER BY m.created_at DESC""",
         (user_id,)
     ).fetchall()
