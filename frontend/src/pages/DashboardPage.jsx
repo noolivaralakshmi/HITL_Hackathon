@@ -130,12 +130,6 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-white">Dashboard</h1>
           <p className="text-sm text-white/40 mt-1">Welcome back, {currentUser?.name}</p>
         </div>
-        <button
-          onClick={() => navigate('/create')}
-          className="btn-primary flex items-center gap-2"
-        >
-          Create Memory <ArrowRight className="w-4 h-4" />
-        </button>
       </div>
 
       {/* Stats Cards */}
