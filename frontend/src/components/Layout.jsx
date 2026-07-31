@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useUser } from '../context/UserContext'
-import { Brain, LayoutDashboard, Upload, MessageSquare, LogOut } from 'lucide-react'
+import { Brain, LayoutDashboard, Upload, MessageSquare, LogOut, User } from 'lucide-react'
 
 export default function Layout({ children }) {
   const { currentUser, logout, isReviewer } = useUser()
@@ -22,62 +22,69 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen gradient-mesh">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-surface-950/80 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div
-            className="flex items-center gap-3 cursor-pointer"
-            onClick={() => navigate('/dashboard')}
-          >
-            <div className="w-10 h-10 bg-primary-600/20 rounded-xl flex items-center justify-center border border-primary-500/30">
-              <Brain className="w-5 h-5 text-primary-400" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">Change Impact Memory</h1>
-              <p className="text-xs text-white/40">Enterprise Decision Intelligence</p>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.path
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {item.label}
-                </button>
-              )
-            })}
-          </nav>
-
-          {/* User */}
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-white">{currentUser?.name}</p>
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                isReviewer
-                  ? 'text-purple-400 bg-purple-500/20 border-purple-500/30'
-                  : 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30'
-              }`}>
-                {isReviewer ? 'Contributor + Reviewer' : 'Contributor'}
-              </span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/40 hover:text-white"
-              title="Logout"
+      <header className="sticky top-0 z-50 bg-surface-950/90 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => navigate('/dashboard')}
             >
-              <LogOut className="w-4 h-4" />
-            </button>
+              <div className="w-9 h-9 bg-gradient-to-br from-primary-600/30 to-violet-600/20 rounded-lg flex items-center justify-center border border-primary-500/30">
+                <Brain className="w-5 h-5 text-primary-400" />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-sm font-bold text-white leading-tight">Change Impact Memory</h1>
+                <p className="text-[10px] text-white/30">Enterprise Decision Intelligence</p>
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <nav className="flex items-center gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const isActive = location.pathname === item.path || 
+                  (item.path === '/create' && location.pathname.startsWith('/memory/'))
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-white/[0.08] text-white border border-white/[0.1]'
+                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden md:inline">{item.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* User Profile */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-600/40 to-violet-600/30 flex items-center justify-center">
+                  <User className="w-4 h-4 text-white/80" />
+                </div>
+                <div className="hidden sm:block text-right">
+                  <p className="text-sm font-medium text-white leading-tight">{currentUser?.name}</p>
+                  <span className={`text-[10px] font-medium ${
+                    isReviewer ? 'text-purple-300' : 'text-emerald-300'
+                  }`}>
+                    {isReviewer ? 'Contributor + Reviewer' : 'Contributor'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors text-white/30 hover:text-white/70"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -86,9 +93,9 @@ export default function Layout({ children }) {
       <main className="max-w-7xl mx-auto px-6 py-8">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }}
         >
           {children}
         </motion.div>
