@@ -222,6 +222,52 @@ Full API docs: http://localhost:8000/docs
 
 ---
 
+## Disclosure: Pre-existing Components & Third-Party Services
+
+### Third-Party / Proprietary Services Used
+
+| Component | Provider | Purpose |
+|-----------|----------|---------|
+| Amazon Bedrock (Nova 2 Lite) | AWS | AI model for document analysis and reasoning |
+| AWS Bedrock Guardrails | AWS | PII anonymization, content safety, credential blocking |
+| AWS S3 | AWS | Document storage with pre-signed download URLs |
+
+### Open-Source Libraries
+
+| Library | Purpose |
+|---------|---------|
+| React 18 | Frontend UI framework |
+| Vite | Build tool and dev server |
+| TailwindCSS | Utility-first CSS styling |
+| Framer Motion | Page transitions and animations |
+| FastAPI | Python backend framework |
+| SQLite + FTS5 | Database with full-text search |
+| Boto3 | AWS SDK for Python |
+| Axios | HTTP client |
+| Lucide React | Icon library |
+| React Router | Client-side routing |
+| React Dropzone | File upload drag-and-drop |
+| PyPDF2 / python-docx | PDF and DOCX text extraction |
+
+### Original Work (Built During Hackathon)
+
+- HITL workflow engine (upload → AI draft → human review → approve/reject → verified knowledge)
+- Role-based approval system (contributor vs contributor+reviewer separation)
+- Document analysis prompts and decision reasoning reconstruction
+- Risk assessment algorithm (confidence × missing info × guardrail flags)
+- Duplicate detection and memory merge flow
+- Reviewer assignment and send-for-approval workflow
+- HITL chat interface (reviewer asks AI questions grounded in evidence)
+- Action log / immutable audit trail
+- Rollback system with snapshot preservation
+- Local PII masking layer (regex-based, runs before Bedrock)
+- AWS Bedrock Guardrail configuration and integration (5 iterations)
+- S3 upload with pre-signed URL evidence linking
+- Dashboard with role-based tabs and stats
+- Login system with role-based access control
+
+---
+
 ## Hackathon Judging Coverage
 
 | Criteria | Weight | How We Address It |
