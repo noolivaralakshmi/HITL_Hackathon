@@ -1,8 +1,45 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Send, Bot, User, Search, FileText, CheckCircle, XCircle, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Send, Bot, User, Search, FileText, CheckCircle, XCircle, ArrowRight, ExternalLink } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { queryKnowledge } from '../api/client'
+import api from '../api/client'
+
+function EvidenceChip({ filename, memoryId }) {
+  const [url, setUrl] = useState(null)
+
+  useEffect(() => {
+    if (memoryId) {
+      api.get(`/documents/memory/${memoryId}`)
+        .then(res => {
+          const docs = res.data?.documents || []
+          const match = docs.find(d =>
+            d.filename === filename ||
+            d.filename.toLowerCase().includes(filename.toLowerCase().replace('.pdf', '').replace('.txt', ''))
+          )
+          if (match?.download_url) setUrl(match.download_url)
+        })
+        .catch(() => {})
+    }
+  }, [filename, memoryId])
+
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-all cursor-pointer">
+        <FileText className="w-3 h-3" />
+        {filename}
+        <ExternalLink className="w-2.5 h-2.5" />
+      </a>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-300">
+      <FileText className="w-3 h-3" />
+      {filename}
+    </span>
+  )
+}
 
 export default function QueryPage() {
   const navigate = useNavigate()
@@ -125,10 +162,7 @@ export default function QueryPage() {
             <p className="text-xs text-white/40 uppercase font-semibold mb-2">Evidence</p>
             <div className="flex flex-wrap gap-2">
               {answer.evidence.map((doc, i) => (
-                <span key={i} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-300">
-                  <FileText className="w-3 h-3" />
-                  {doc}
-                </span>
+                <EvidenceChip key={i} filename={doc} memoryId={answer.memory_id} />
               ))}
             </div>
           </div>
