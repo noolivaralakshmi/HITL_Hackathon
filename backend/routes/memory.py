@@ -47,6 +47,11 @@ def generate_memory(req: GenerateMemoryRequest):
         for doc in docs
     ])
 
+    # Mask PII in documents before sending to Bedrock
+    # This prevents the AWS Guardrail from blocking on input PII
+    from backend.services.guardrail_service import detect_pii
+    pii_flags_docs, documents_text_safe = detect_pii(documents_text)
+
     # Create memory record
     memory = create_memory(req.user_id)
     memory_id = memory["id"]
@@ -67,7 +72,7 @@ def generate_memory(req: GenerateMemoryRequest):
 
     # AI Analysis
     try:
-        analysis = analyze_documents(documents_text)
+        analysis = analyze_documents(documents_text_safe)
     except GuardrailBlockedException as e:
         # AWS Bedrock Guardrail blocked the content
         analysis = {
@@ -122,7 +127,7 @@ def generate_memory(req: GenerateMemoryRequest):
 
     # Guardrail checks
     try:
-        guardrail_result = run_guardrails(reasoning, documents_text, confidence)
+        guardrail_result = run_guardrails(reasoning, documents_text_safe, confidence)
         # If PII was detected, use the redacted/cleaned reasoning instead
         if guardrail_result.get("has_pii") and guardrail_result.get("cleaned_reasoning"):
             reasoning = guardrail_result["cleaned_reasoning"]
@@ -131,6 +136,9 @@ def generate_memory(req: GenerateMemoryRequest):
 
     # Risk assessment
     risk_level = assess_risk(confidence, len(missing_info), guardrail_result)
+
+    # Combine document PII flags with guardrail flags
+    all_guardrail_flags = pii_flags_docs + guardrail_result.get("flags", [])
 
     # Update memory with all results
     status = "BLOCKED" if risk_level == "BLOCKED" else "DRAFT"
@@ -142,7 +150,7 @@ def generate_memory(req: GenerateMemoryRequest):
         reasoning=reasoning,
         missing_info=missing_info,
         risk_level=risk_level,
-        guardrail_flags=guardrail_result.get("flags", []),
+        guardrail_flags=all_guardrail_flags,
         status=status,
     )
 
