@@ -41,6 +41,29 @@ export default function Layout({ children }) {
 
             {/* Navigation - removed, using quick access cards on dashboard instead */}
 
+            {/* Navigation */}
+            <nav className="flex items-center gap-2">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const isActive = location.pathname === item.path ||
+                  (item.path === '/create' && location.pathname.startsWith('/memory/'))
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-primary-600/20 text-white border border-primary-500/40'
+                        : 'text-white/50 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+
             {/* User Profile */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
