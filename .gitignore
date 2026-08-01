@@ -27,3 +27,7 @@ Thumbs.db
 # Kiro
 .kiro/
 .mov
+*.mov
+*.zip
+HITL_Hachathon/
+HITL_Hachathon 2/
