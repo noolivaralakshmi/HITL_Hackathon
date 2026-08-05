@@ -1,0 +1,71 @@
+ARCHITECTURE DECISION RECORD
+ADR-2026-007: Passkey Authentication Implementation
+
+Status: ACCEPTED
+Date: January 28, 2026
+Author: Marcus Johnson, VP Engineering
+Reviewers: Security Team, Platform Team, DevOps
+
+CONTEXT:
+
+Our current authentication system uses password + optional TOTP-based MFA.
+Following the security review (SEC-2026-0042), we need to implement passkey-based authentication.
+
+DECISION:
+
+We will implement WebAuthn/FIDO2 passkeys as the primary authentication mechanism.
+
+Technical Architecture:
+- WebAuthn Relying Party (RP) server integrated into existing auth service
+- Credential storage: Separate encrypted database for public keys
+- Challenge generation: Cryptographically secure, time-bounded challenges
+- Platform authenticator support: Touch ID, Face ID, Windows Hello, Android Biometric
+- Cross-device support: QR-code based CTAP2 protocol for legacy devices
+
+Implementation Stack:
+- Backend: WebAuthn server library (SimpleWebAuthn)
+- Frontend: WebAuthn browser API (navigator.credentials)
+- Storage: Dedicated credential store (PostgreSQL with encryption at rest)
+- Monitoring: Authentication event pipeline to SIEM
+
+CONSEQUENCES:
+
+Positive:
+- Eliminates phishing risk for credential theft
+- Reduces authentication latency (biometric vs typing password)
+- Removes password reset workflow entirely for passkey users
+- Simplifies compliance (no password hashing, rotation, or complexity rules)
+
+Negative:
+- Requires fallback mechanism for unsupported devices (~5% of fleet)
+- Initial development effort: 3 engineering sprints
+- User training and communication required
+- Cannot deprecate passwords until 95% adoption threshold reached
+
+ALTERNATIVES REJECTED:
+
+1. SMS-based 2FA Enhancement
+   Reason: NIST 800-63B deprecates SMS for authentication.
+   SIM swap attacks make this fundamentally insecure.
+
+2. Hardware Security Keys Only
+   Reason: Logistics impossible at our scale (10,000+ employees).
+   Cost prohibitive ($450K+ hardware alone).
+   User experience significantly worse than biometric passkeys.
+
+3. Magic Link (Email-based) Authentication
+   Reason: Still vulnerable to email account compromise.
+   Latency issues (waiting for email delivery).
+   Not suitable for high-frequency authentication.
+
+DEPENDENCIES:
+- Browser compatibility: Chrome 67+, Safari 14+, Firefox 60+, Edge 18+
+- Device compatibility: Any device with platform authenticator (2019+)
+- Backend: Auth service v3.2+ required
+
+METRICS:
+- Success: 95% user adoption within 6 months
+- Success: Zero password-based breaches post-migration
+- Success: 80% reduction in auth-related support tickets
+
+Budget: $2.3M over 18 months (approved by CFO)
